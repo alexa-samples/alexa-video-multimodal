@@ -1,0 +1,1234 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "ProjectName": {
+      "Type": "String"
+    },
+    "ArtifactBucket": {
+      "Type": "String"
+    },
+    "LambdaZipFileS3ObjectKey": {
+      "Type": "String"
+    },
+    "AwsAccountNumber": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "CognitoUserPool": {
+      "Type": "AWS::Cognito::UserPool",
+      "Properties": {
+        "MfaConfiguration": "OFF",
+        "UsernameAttributes": [
+          "email"
+        ],
+        "AutoVerifiedAttributes": [
+          "email"
+        ],
+        "UserPoolName": {
+          "Fn::Sub": "${ProjectName}-user-pool"
+        },
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": "6",
+            "RequireLowercase": false,
+            "RequireNumbers": false,
+            "RequireSymbols": false,
+            "RequireUppercase": false,
+            "TemporaryPasswordValidityDays": "7"
+          }
+        }
+      }
+    },
+    "CognitoUserPoolClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "ClientName": {
+          "Fn::Sub": "${ProjectName}-user-pool-client"
+        },
+        "GenerateSecret": true,
+        "ExplicitAuthFlows": [],
+        "UserPoolId": {
+          "Ref": "CognitoUserPool"
+        }
+      }
+    },
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRole"
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        },
+       "Policies": [
+          {
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "sts:AssumeRole",
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            },
+            "PolicyName": {
+              "Fn::Sub": "${ProjectName}-sts-policy"
+            }
+          },
+          {
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "dynamodb:BatchGetItem",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:PutItem",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:GetItem",
+                    "dynamodb:Scan",
+                    "dynamodb:Query",
+                    "dynamodb:UpdateItem",
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:s3:::${ArtifactBucket}"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:s3:::${ArtifactBucket}/content/*"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AwsAccountNumber}:log-group:*"
+                    },
+                    {
+                      "Fn::GetAtt": [
+                        "PaginationDatabase",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::GetAtt": [
+                        "VideoProgressTable",
+                        "Arn"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "PolicyName": {
+              "Fn::Sub": "${ProjectName}-lambda-policy"
+            }
+          }
+        ],
+        "RoleName": {
+          "Fn::Sub": "${ProjectName}-lambda-execution-role"
+        }
+      }
+    },
+    "Lambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ArtifactBucket"
+          },
+          "S3Key": {
+            "Ref": "LambdaZipFileS3ObjectKey"
+          }
+        },
+        "Description": "The lambda for the skill",
+        "FunctionName": {
+          "Fn::Sub": "${ProjectName}-lambda"
+        },
+        "Handler": "index.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "LambdaExecutionRole",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs10.x",
+        "Environment": {
+          "Variables": {
+            "IAM_STS_WEB_PLAYER_ROLE_ARN": {
+              "Fn::GetAtt": [
+                "WebPlayerRole",
+                "Arn"
+              ]
+            },
+            "API_GATEWAY_ID": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "VIDEO_CONTENT_BUCKET": {
+              "Ref": "ArtifactBucket"
+            },
+            "ENABLE_WEB_PLAYER_LOGGING": "false"
+          }
+        }
+      }
+    },
+    "WebPlayerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:aws:iam::${AwsAccountNumber}:root"
+                }
+              },
+              "Action": "sts:AssumeRole",
+              "Condition": {}
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "execute-api:Invoke"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": [
+                        "arn:aws:execute-api:${AWS::Region}:${AwsAccountNumber}:${ApiId}/prod/POST/lambda",
+                        {
+                          "ApiId": {
+                            "Ref": "ApiGatewayRestApi"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:aws:execute-api:${AWS::Region}:${AwsAccountNumber}:${ApiId}/prod/POST/cloud-watch-logs/create-log-stream",
+                        {
+                          "ApiId": {
+                            "Ref": "ApiGatewayRestApi"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:aws:execute-api:${AWS::Region}:${AwsAccountNumber}:${ApiId}/prod/POST/cloud-watch-logs/put-log-events",
+                        {
+                          "ApiId": {
+                            "Ref": "ApiGatewayRestApi"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:aws:execute-api:${AWS::Region}:${AwsAccountNumber}:${ApiId}/prod/GET/cloud-watch-logs/get-sequence-token",
+                        {
+                          "ApiId": {
+                            "Ref": "ApiGatewayRestApi"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            "PolicyName": {
+              "Fn::Sub": "${ProjectName}-cloud-watch-logs-policy"
+            }
+          }
+        ],
+        "RoleName": {
+          "Fn::Sub": "${ProjectName}-web-player-role"
+        }
+      }
+    },
+    "WebPlayerCloudWatchLogsGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "${ProjectName}-web-player-log-group"
+        },
+        "RetentionInDays": 30
+      }
+    },
+    "PaginationDatabase": {
+      "Type": "AWS::DynamoDB::Table",
+      "Description": "Holds data for Pagination",
+      "Properties": {
+        "TableName": {
+          "Fn::Sub": "${ProjectName}-pagination-table"
+        },
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "token",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "token",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": "5",
+          "WriteCapacityUnits": "5"
+        },
+        "TimeToLiveSpecification": {
+          "AttributeName": "ttl",
+          "Enabled": true
+        }
+      }
+    },
+    "VideoProgressTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Description": "Holds data for tracking the time position of a video that a particular user is watching",
+      "Properties": {
+        "TableName": {
+          "Fn::Sub": "${ProjectName}-video-progress-table"
+        },
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "userId",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "videoId",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "userId",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "videoId",
+            "KeyType": "RANGE"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": "5",
+          "WriteCapacityUnits": "5"
+        },
+        "TimeToLiveSpecification": {
+          "AttributeName": "ttl",
+          "Enabled": true
+        }
+      }
+    },
+    "ApiGatewayRestApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${ProjectName}-api-gateway"
+        }
+      }
+    },
+    "ApiGatewayLambdaResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "ApiGatewayRestApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "lambda",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayLambdaPostMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "AWS_IAM",
+        "HttpMethod": "POST",
+        "Integration": {
+          "Type": "AWS",
+          "Credentials": {
+            "Fn::GetAtt": [
+              "ApiGatewayRole",
+              "Arn"
+            ]
+          },
+          "IntegrationHttpMethod": "POST",
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "4\\d{2}",
+              "StatusCode": 400,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "5\\d{2}",
+              "StatusCode": 500,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          ],
+          "Uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Lambda.Arn}/invocations"
+          }
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 400,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 500,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make POST request to lambda",
+        "ResourceId": {
+          "Ref": "ApiGatewayLambdaResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "RequestModels": {
+          "application/json": {
+            "Ref": "ApiGatewayLambdaRequestModel"
+          }
+        },
+        "RequestValidatorId": {
+          "Ref": "ApiGatewayRequestValidator"
+        }
+      }
+    },
+    "ApiGatewayLambdaOptionsMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "OPTIONS",
+        "Integration": {
+          "Type": "MOCK",
+          "PassthroughBehavior": "WHEN_NO_MATCH",
+          "RequestTemplates": {
+            "application/json": "{\n \"statusCode\": 200\n}"
+          },
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "ResponseTemplates": {
+                "application/json": ""
+              }
+            }
+          ]
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Headers": false,
+              "method.response.header.Access-Control-Allow-Methods": false,
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make an OPTIONS request to lambda",
+        "ResourceId": {
+          "Ref": "ApiGatewayLambdaResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayCloudWatchLogsResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "ApiGatewayRestApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "cloud-watch-logs",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayCreateLogStreamResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Ref": "ApiGatewayCloudWatchLogsResource"
+        },
+        "PathPart": "create-log-stream",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayCreateLogStreamPostMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RequestParameters": {
+          "method.request.querystring.log-stream-name": true
+        },
+        "AuthorizationType": "AWS_IAM",
+        "HttpMethod": "POST",
+        "Integration": {
+          "Type": "AWS",
+          "PassthroughBehavior": "WHEN_NO_TEMPLATES",
+          "RequestTemplates": {
+            "application/json": {
+              "Fn::Sub": [
+                "#set($context.requestOverride.header['X-Amz-Target'] = \"Logs_20140328.CreateLogStream\")\n#set($context.requestOverride.header['Content-Type'] = \"application/x-amz-json-1.1\")\n#set($inputRoot = $input.path('$'))\n{\n  \"logGroupName\" : \"${LogGroupName}\",\n  \"logStreamName\" : \"$input.params().querystring.get('log-stream-name')\"\n}",
+                {
+                  "LogGroupName": {
+                    "Fn::Sub": "${ProjectName}-web-player-log-group"
+                  }
+                }
+              ]
+            }
+          },
+          "Credentials": {
+            "Fn::GetAtt": [
+              "ApiGatewayRole",
+              "Arn"
+            ]
+          },
+          "IntegrationHttpMethod": "POST",
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "4\\d{2}",
+              "StatusCode": 400,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "5\\d{2}",
+              "StatusCode": 500,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          ],
+          "Uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:logs:action/CreateLogStream"
+          }
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 400,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 500,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make POST request to cloud watch logs create log stream",
+        "ResourceId": {
+          "Ref": "ApiGatewayCreateLogStreamResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "RequestValidatorId": {
+          "Ref": "ApiGatewayRequestValidator"
+        }
+      }
+    },
+    "ApiGatewayCreateLogStreamOptionsMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "OPTIONS",
+        "Integration": {
+          "Type": "MOCK",
+          "PassthroughBehavior": "WHEN_NO_MATCH",
+          "RequestTemplates": {
+            "application/json": "{\n \"statusCode\": 200\n}"
+          },
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "ResponseTemplates": {
+                "application/json": ""
+              }
+            }
+          ]
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Headers": false,
+              "method.response.header.Access-Control-Allow-Methods": false,
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make an OPTIONS request to create log stream",
+        "ResourceId": {
+          "Ref": "ApiGatewayCreateLogStreamResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayPutLogEventsResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Ref": "ApiGatewayCloudWatchLogsResource"
+        },
+        "PathPart": "put-log-events",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayPutLogEventsPostMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RequestModels": {
+          "application/json": {
+            "Ref": "ApiGatewayPutLogEventsRequestModel"
+          }
+        },
+        "AuthorizationType": "AWS_IAM",
+        "HttpMethod": "POST",
+        "Integration": {
+          "Type": "AWS",
+          "PassthroughBehavior": "WHEN_NO_TEMPLATES",
+          "RequestTemplates": {
+            "application/json": {
+              "Fn::Sub": [
+                "#set($context.requestOverride.header['X-Amz-Target'] = \"Logs_20140328.PutLogEvents\")\n#set($context.requestOverride.header['Content-Type'] = \"application/x-amz-json-1.1\")\n\n#set($sequenceToken = \"#if($input.path('$.sequenceToken')==\"\"\"\")#{else},\"\"sequenceToken\"\": \"\"$input.path('$.sequenceToken')\"\"#end\")\n#set($inputRoot = $input.path('$'))\n{\n   \"logEvents\": $input.path('$.messages'),\n   \"logGroupName\": \"${LogGroupName}\",\n   \"logStreamName\": \"$input.path('$.logStreamName')\"$sequenceToken\n}",
+                {
+                  "LogGroupName": {
+                    "Fn::Sub": "${ProjectName}-web-player-log-group"
+                  }
+                }
+              ]
+            }
+          },
+          "Credentials": {
+            "Fn::GetAtt": [
+              "ApiGatewayRole",
+              "Arn"
+            ]
+          },
+          "IntegrationHttpMethod": "POST",
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "4\\d{2}",
+              "StatusCode": 400,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "5\\d{2}",
+              "StatusCode": 500,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          ],
+          "Uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:logs:action/PutLogEvents"
+          }
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 400,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 500,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make POST request to cloud watch logs put log events",
+        "ResourceId": {
+          "Ref": "ApiGatewayPutLogEventsResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "RequestValidatorId": {
+          "Ref": "ApiGatewayRequestValidator"
+        }
+      }
+    },
+    "ApiGatewayPutLogEventsOptionsMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "OPTIONS",
+        "Integration": {
+          "Type": "MOCK",
+          "PassthroughBehavior": "WHEN_NO_MATCH",
+          "RequestTemplates": {
+            "application/json": "{\n \"statusCode\": 200\n}"
+          },
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "ResponseTemplates": {
+                "application/json": ""
+              }
+            }
+          ]
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Headers": false,
+              "method.response.header.Access-Control-Allow-Methods": false,
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make an OPTIONS request to cloud watch logs put log events",
+        "ResourceId": {
+          "Ref": "ApiGatewayPutLogEventsResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayGetSequenceTokenResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Ref": "ApiGatewayCloudWatchLogsResource"
+        },
+        "PathPart": "get-sequence-token",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayGetSequenceTokenGetMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RequestParameters": {
+          "method.request.querystring.log-stream-name": true
+        },
+        "AuthorizationType": "AWS_IAM",
+        "HttpMethod": "GET",
+        "Integration": {
+          "Type": "AWS",
+          "PassthroughBehavior": "WHEN_NO_TEMPLATES",
+          "RequestTemplates": {
+            "application/json": {
+              "Fn::Sub": [
+                "#set($context.requestOverride.header['X-Amz-Target'] = \"Logs_20140328.DescribeLogStreams\")\n#set($context.requestOverride.header['Content-Type'] = \"application/x-amz-json-1.1\")\n#set($inputRoot = $input.path('$'))\n{\n   \"logGroupName\" : \"${LogGroupName}\",\n   \"logStreamNamePrefix\": \"$input.params().querystring.get('log-stream-name')\"   \n}",
+                {
+                  "LogGroupName": {
+                    "Fn::Sub": "${ProjectName}-web-player-log-group"
+                  }
+                }
+              ]
+            }
+          },
+          "Credentials": {
+            "Fn::GetAtt": [
+              "ApiGatewayRole",
+              "Arn"
+            ]
+          },
+          "IntegrationHttpMethod": "POST",
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseTemplates": {
+                "application/json": "{\n  \"sequenceToken\" : \"$input.path('$.logStreams[0]uploadSequenceToken')\"\n}"
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "4\\d{2}",
+              "StatusCode": 400,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            },
+            {
+              "SelectionPattern": "5\\d{2}",
+              "StatusCode": 500,
+              "ResponseTemplates": {
+                "application/json": ""
+              },
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          ],
+          "Uri": {
+            "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:logs:action/DescribeLogStreams"
+          }
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 400,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          },
+          {
+            "StatusCode": 500,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make GET request to retrieve a cloud watch logs sequence token for a particular log stream",
+        "ResourceId": {
+          "Ref": "ApiGatewayGetSequenceTokenResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "RequestValidatorId": {
+          "Ref": "ApiGatewayRequestValidator"
+        }
+      }
+    },
+    "ApiGatewayGetSequenceTokenOptionsMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "OPTIONS",
+        "Integration": {
+          "Type": "MOCK",
+          "PassthroughBehavior": "WHEN_NO_MATCH",
+          "RequestTemplates": {
+            "application/json": "{\n \"statusCode\": 200\n}"
+          },
+          "IntegrationResponses": [
+            {
+              "StatusCode": 200,
+              "ResponseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              },
+              "ResponseTemplates": {
+                "application/json": ""
+              }
+            }
+          ]
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": 200,
+            "ResponseModels": {
+              "application/json": "Empty"
+            },
+            "ResponseParameters": {
+              "method.response.header.Access-Control-Allow-Headers": false,
+              "method.response.header.Access-Control-Allow-Methods": false,
+              "method.response.header.Access-Control-Allow-Origin": false
+            }
+          }
+        ],
+        "OperationName": "Make OPTIONS request to retrieve a cloud watch logs sequence token for a particular log stream",
+        "ResourceId": {
+          "Ref": "ApiGatewayGetSequenceTokenResource"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        }
+      }
+    },
+    "ApiGatewayDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "Description": "Api Gateway Prod Deployment",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "StageName": "prod"
+      },
+      "DependsOn": [
+        "ApiGatewayLambdaPostMethod",
+        "ApiGatewayLambdaOptionsMethod",
+        "ApiGatewayCreateLogStreamPostMethod",
+        "ApiGatewayCreateLogStreamOptionsMethod",
+        "ApiGatewayPutLogEventsPostMethod",
+        "ApiGatewayPutLogEventsOptionsMethod",
+        "ApiGatewayGetSequenceTokenGetMethod",
+        "ApiGatewayGetSequenceTokenOptionsMethod"
+      ]
+    },
+    "ApiGatewayRequestValidator": {
+      "Type": "AWS::ApiGateway::RequestValidator",
+      "Properties": {
+        "Name": "BodyAndParameterRequestValidator",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "ValidateRequestBody": true,
+        "ValidateRequestParameters": true
+      },
+      "DependsOn": "ApiGatewayRestApi"
+    },
+    "ApiGatewayLambdaRequestModel": {
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {
+        "ContentType": "application/json",
+        "Description": "Request model for requests to lambda",
+        "Name": "ApiGatewayLambdaRequestModel",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "Schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": [
+            "directive"
+          ],
+          "properties": {
+            "directive": {
+              "type": "object",
+              "required": [
+                "header"
+              ],
+              "properties": {
+                "header": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "enum": [
+                        "RefreshWebPlayerCredentials",
+                        "GetPlayableItemsMetadata",
+                        "UpdateVideoProgress"
+                      ]
+                    }
+                  }
+                },
+                "payload": {
+                  "type": "object",
+                  "properties": {
+                    "mediaIdentifier": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "videoProgress": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "positionInMilliseconds": {
+                          "type": "number"
+                        },
+                        "accessToken": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ApiGatewayPutLogEventsRequestModel": {
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {
+        "ContentType": "application/json",
+        "Description": "Request model for requests to put cloud watch log events",
+        "Name": "ApiGatewayPutLogEventsRequestModel",
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "Schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "required": [
+            "logStreamName",
+            "messages"
+          ],
+          "properties": {
+            "sequenceToken": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "logStreamName": {
+              "type": "string"
+            },
+            "messages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "message",
+                  "timestamp"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "ApiGatewayRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "apigateway.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "lambda:InvokeFunction",
+                    "logs:CreateLogStream",
+                    "logs:DescribeLogStreams",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "Lambda",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AwsAccountNumber}:log-group:${ProjectName}-web-player-log-group"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AwsAccountNumber}:log-group:${ProjectName}-web-player-log-group:log-stream:*"
+                    }
+                  ]
+                }
+              ]
+            },
+            "PolicyName": {
+              "Fn::Sub": "${ProjectName}-api-gateway-policy"
+            }
+          }
+        ],
+        "RoleName": {
+          "Fn::Sub": "${ProjectName}-api-gateway-role"
+        }
+      }
+    }
+  }
+}

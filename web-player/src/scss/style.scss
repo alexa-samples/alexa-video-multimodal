@@ -1,0 +1,130 @@
+$body-bg: black;
+$fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
+
+@import "~bootstrap/scss/bootstrap";
+@import '~@fortawesome/fontawesome-free/scss/fontawesome';
+@import "~@fortawesome/fontawesome-free/scss/solid";
+@import "~@fortawesome/fontawesome-free/scss/brands";
+
+body {
+  color: white;
+}
+
+.web-player-body {
+  overflow: hidden;
+}
+
+.controls-overlay {
+  position: fixed;
+  z-index: 99;
+  background: rgb(10, 10, 10);
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.controls-container {
+  font-size: 60px;
+  position: fixed;
+  z-index: 100;
+  width: 100%;
+}
+
+.fade-out {
+  -webkit-transition: opacity 250ms ease-in-out;
+  opacity: 0;
+}
+
+.fade-in {
+  -webkit-transition: opacity 150ms ease-in-out;
+  opacity: 0.7;
+}
+
+.hidden {
+  display: none;
+}
+
+.seek-bar-item {
+  align-items: center;
+  display: flex;
+  font-size: 30px;
+  width: 100%;
+  margin: 0 auto;
+  float: none;
+}
+
+.seek-bar-number {
+  font-size: 30px;
+}
+
+.cc-icon {
+  font-size: 50px;
+}
+
+.video-title {
+  font-size: 50px;
+}
+
+.top-controls {
+  @extend .fixed-top;
+  margin-top: 1%;
+  margin-right: 1%;
+  margin-left: 1%;
+}
+
+.bottom-controls {
+  @extend .fixed-bottom;
+  margin-bottom: 10%;
+}
+
+.next-episode-controls {
+  @extend .fixed-bottom;
+  margin: 0;
+  background-color: black;
+  height: 10%;
+  font-size: 40px;
+  vertical-align: middle;;
+}
+
+.cc-options-container {
+  font-size: 30px;
+  position: fixed;
+  z-index: 100;
+  width: 100%;
+}
+
+hr {
+  -moz-border-bottom-colors: none;
+  -moz-border-image: none;
+  -moz-border-left-colors: none;
+  -moz-border-right-colors: none;
+  -moz-border-top-colors: none;
+  //noinspection CssInvalidPropertyValue
+  border-color: #EEEEEE -moz-use-text-color #FFFFFF;
+  border-style: solid none;
+  border-width: 1px 0;
+  margin: 18px 0;
+}
+
+.cc-radio-container {
+  display: flex;
+  align-items: center;
+}
+
+.cc-radio {
+  transform: scale(1.5);
+  margin-right: 15px;
+}
+
+.web-player-close {
+  font-size: 50px;
+}
+
+.seek-bar {
+  width: 100%;
+}
+
+.cc-close-row {
+  margin-top: 1%;
+}

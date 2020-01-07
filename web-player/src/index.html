@@ -1,0 +1,112 @@
+<!doctype html>
+<html class="no-js" lang="">
+<head>
+    <meta http-equiv="cache-control" content="max-age=0"/>
+    <meta http-equiv="cache-control" content="no-store"/>
+    <meta http-equiv="expires" content="-1"/>
+    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT"/>
+    <meta http-equiv="pragma" content="no-cache"/>
+</head>
+<body class="web-player-body" scroll="no">
+
+<div id="controlsOverlay" class="controls-overlay fade-out hidden">
+</div>
+<div id="controlsContainer" class="controls-container fade-out hidden">
+    <div class="row top-controls">
+        <div id="webPlayerClose" class="col-1 text-center web-player-close">
+            <i class="fa fa-chevron-left"></i>
+        </div>
+        <div class="col-10  text-center video-title">
+            <span id="videoTitle"></span><br/>
+            <small id="videoSmallTitle"></small>
+        </div>
+        <div class="col-1 text-center cc-icon">
+            <i id="closedCaptioning" class="fa fa-closed-captioning "></i>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-2 offset-2 text-center">
+            <span class="fa-stack ">
+                <i id="seekBackward" class="fa fa-undo"></i>
+            </span>
+        </div>
+        <div class="col-4 text-center">
+            <span class="fa-stack ">
+                <i id="play" class="fa fa-play fa-stack-1x"></i>
+                <i id="pause" class="fa fa-pause hidden fa-stack-1x"></i>
+            </span>
+        </div>
+        <div class="col-2 text-center">
+            <span class="fa-stack ">
+                <i id="seekForward" class="fa fa-undo fa-flip-horizontal"></i>
+            </span>
+        </div>
+    </div>
+    <div class="row bottom-controls" id="seekBarRow">
+        <div class="col-2  text-right seek-bar-number">
+            <small id="currentTimePosition"></small>
+        </div>
+        <div class="col-8 seek-bar-item text-center">
+            <input id="seekBar" class="border-0 custom-range seek-bar" type="range" min="0" max="100" step="0.001"
+                   value="0"/>
+
+        </div>
+        <div class="col-2 text-left seek-bar-number">
+            <small id="videoDuration"></small>
+        </div>
+    </div>
+    <div class="row next-episode-controls" id="nextEpisodeRow" style="display: none;">
+        <div class="col-12 text-right">
+            <small style="margin-right: 1%;">
+                Up Next <span id="nextEpisodeText"></span>
+                <i style="margin-left: 1%" class="fa fa-play-circle"></i>
+            </small>
+        </div>
+    </div>
+</div>
+<div id="ccOptionsContainer" class="hidden cc-options-container">
+    <div class="row cc-close-row">
+        <div id="ccClose" class="col-1 text-center">
+            <i class="fa fa-chevron-left"></i>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-10 offset-1 text-left">
+            Closed Captioning
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-10 offset-1 text-left">
+            <hr/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-10 offset-1 text-left">
+
+            <div class="form-check cc-radio-container">
+                <input class="cc-radio" type="radio" name="cc-radio" id="disabled-cc" value="disabled" checked>
+                <label class="form-check-label" for="disabled-cc">
+                    None
+                </label>
+            </div>
+            <div class="form-check cc-radio-container">
+                <input class="cc-radio" type="radio" name="cc-radio" id="en-cc" value="en">
+                <label class="form-check-label" for="en-cc">
+                    English
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<video class="player" id="player" crossorigin="anonymous"></video>
+
+<!--<script src="//console.re/connector.js" data-channel="vsk-mm-logs" id="consolerescript"></script>-->
+<script type="text/javascript"
+        src="https://dmx0zb087qvjm.cloudfront.net/alexa-web-player-controller.0.1.min.js"></script>
+</body>
+</html>
+<!--       _
+       .__(.)< (MEOW)
+        \___)
+ ~~~~~~~~~~~~~~~~~~-->

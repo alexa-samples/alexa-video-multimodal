@@ -1,0 +1,85 @@
+{
+  "name": "lambda",
+  "version": "1.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "webpack --mode production --module-bind js=babel-loader",
+    "watch": "webpack --mode development --module-bind js=babel-loader --watch --progress",
+    "build": "npm run test && npm run jsdoc && npm run clean && npm run compile && npm run mv-docs",
+    "clean": "node ./scripts/clean.js",
+    "release": "npm install && npm run build",
+    "execute-tests": "babel-node test/run.js",
+    "test": "nyc npm run execute-tests && nyc report --reporter=html",
+    "jsdoc": "jsdoc -d doc src",
+    "mv-docs": "node ./scripts/mv-docs.js"
+  },
+  "author": "Prem Ankur <fnankur@amazon.com>",
+  "contributors": [
+    "Frederick C. Tucker <tuckefre@amazon.com>"
+  ],
+  "license": "Amazon Software License",
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/node": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.4.4",
+    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/preset-env": "^7.4.5",
+    "@istanbuljs/nyc-config-babel": "^2.1.1",
+    "@types/jasmine": "^3.3.16",
+    "adm-zip": "^0.4.13",
+    "babel-loader": "^8.0.6",
+    "babel-plugin-istanbul": "^5.1.4",
+    "babel-plugin-lodash": "^3.3.4",
+    "babel-plugin-syntax-async-functions": "^6.13.0",
+    "eslint": "^5.16.0",
+    "eslint-config-standard": "^13.0.1",
+    "eslint-loader": "^2.1.2",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-jasmine": "^2.10.1",
+    "eslint-plugin-jsdoc": "^15.7.2",
+    "eslint-plugin-node": "^9.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "fs": "0.0.1-security",
+    "istanbul": "^0.4.5",
+    "jasmine": "^3.4.0",
+    "jsdoc": "^3.6.3",
+    "lodash-webpack-plugin": "^0.11.5",
+    "nyc": "^14.1.1",
+    "rimraf": "^2.6.3",
+    "uuid": "^3.3.2",
+    "webpack": "^4.35.0",
+    "webpack-cli": "^3.3.5"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.485.0",
+    "lodash": "^4.17.15",
+    "log4js": "^6.0.0"
+  },
+  "eslintConfig": {
+    "parserOptions": {
+      "sourceType": "module",
+      "ecmaVersion": 2018
+    },
+    "extends": [
+      "standard",
+      "plugin:jsdoc/recommended",
+      "plugin:jasmine/recommended"
+    ],
+    "globals": {
+      "Observable": true,
+      "_babelPolyfill": true
+    },
+    "env": {
+      "jasmine": true
+    },
+    "plugins": [
+      "jasmine"
+    ],
+    "rules": {
+      "jasmine/no-spec-dupes": "off"
+    }
+  }
+}
