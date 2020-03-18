@@ -67,12 +67,11 @@ export class ApiGatewayController {
         .then(credentials => {
           this.awsMetadata.credentials = AwsCredentials.fromObject(credentials)
           this.logger.info('refreshed aws credentials')
+          this.credentialRefreshTimer = setTimeout(this.refreshAwsCredentials.bind(this), this.refreshInterval)
         })
         .catch(err => {
           this.logger.error('could not refresh aws credentials', err)
           this.awsMetadata.credentials = {}
-        })
-        .finally(() => {
           this.credentialRefreshTimer = setTimeout(this.refreshAwsCredentials.bind(this), this.refreshInterval)
         })
     } else {

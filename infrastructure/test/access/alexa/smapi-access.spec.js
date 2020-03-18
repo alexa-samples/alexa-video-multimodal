@@ -164,6 +164,7 @@ describe('SmapiAccess', () => {
         done()
       })
     })
+
     it('IN_PROGRESS/SUCCEEDED', done => {
       // Arrange
       spyOn(SmapiAccess, 'createSkill').and.returnValue(of('dummy-skill-id'))
@@ -176,6 +177,42 @@ describe('SmapiAccess', () => {
       // Assert
       o.subscribe(skillId => {
         expect(skillId).toEqual('dummy-skill-id')
+        expect(exitWithErrorSpy).not.toHaveBeenCalled()
+        done()
+      })
+    })
+  })
+
+  describe('updateSkillAndWait', () => {
+    it('SUCCEEDED', done => {
+      // Arrange
+      spyOn(SmapiAccess, 'updateSkillManifest').and.returnValue(of(null))
+      spyOn(SmapiAccess, 'checkSkillStatus').and.returnValue(of('SUCCEEDED'))
+      const exitWithErrorSpy = spyOn(Util, 'exitWithError')
+
+      // Act
+      const o = SmapiAccess.updateSkillAndWait('dummy-vendor-id', {}, 'dummy-access-token')
+
+      // Assert
+      o.subscribe(response => {
+        expect(response).toEqual('SUCCEEDED')
+        expect(exitWithErrorSpy).not.toHaveBeenCalled()
+        done()
+      })
+    })
+
+    it('IN_PROGRESS/SUCCEEDED', done => {
+      // Arrange
+      spyOn(SmapiAccess, 'updateSkillManifest').and.returnValue(of(null))
+      spyOn(SmapiAccess, 'checkSkillStatus').and.returnValues(of('IN_PROGRESS'), of('SUCCEEDED'))
+      const exitWithErrorSpy = spyOn(Util, 'exitWithError')
+
+      // Act
+      const o = SmapiAccess.updateSkillAndWait('dummy-vendor-id', {}, 'dummy-access-token')
+
+      // Assert
+      o.subscribe(response => {
+        expect(response).toEqual('SUCCEEDED')
         expect(exitWithErrorSpy).not.toHaveBeenCalled()
         done()
       })

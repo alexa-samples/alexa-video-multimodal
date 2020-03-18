@@ -126,16 +126,14 @@ export class SmapiAccess {
   static createSkill (vendorId, manifest, accessToken) {
     const logger = log4js.getLogger('smapi-access')
     logger.info(`Creating a new skill`)
-    const payload = manifest
+    const payload = JSON.parse(JSON.stringify(manifest)) // clone
     payload.vendorId = vendorId
     const url = 'https://api.amazonalexa.com/v1/skills'
     const headers = {
       Authorization: 'Bearer ' + accessToken
     }
     return Util.submitHttpRequest(url, headers, 'POST', payload)
-      .pipe(map(response => {
-        return response.skillId
-      }))
+      .pipe(map(response => response.skillId))
   }
 
   /**
@@ -188,6 +186,35 @@ export class SmapiAccess {
       }))
       .pipe(take(1))
       .pipe(map(() => skillId))
+  }
+
+  /**
+   * Update a skill manifest and wait for it to have status `SUCCEEDED`
+   *
+   * @param {string} skillId Skill Id
+   * @param {object} manifest Skill manifest
+   * @param {string} accessToken Access token for ASK authentication
+   * @returns {Observable} An observable
+   */
+  static updateSkillAndWait (skillId, manifest, accessToken) {
+    const logger = log4js.getLogger('smapi-access')
+    const stage = 'development'
+    return this.updateSkillManifest(skillId, stage, manifest, accessToken)
+      .pipe(mergeMap(() => timer(0, 1000)))
+      .pipe(mergeMap(() => this.checkSkillStatus(skillId, accessToken)))
+      .pipe(filter(status => {
+        logger.debug(`The skill status is "${status}"`)
+        if (status === 'SUCCEEDED') {
+          logger.debug(`Stopping skill status poll`)
+          return true
+        } else if (status === 'IN_PROGRESS') {
+          logger.debug(`continuing skill status poll`)
+          return false
+        } else {
+          Util.exitWithError('There was an error updating the skill. The skill status is "' + status + '"')
+        }
+      }))
+      .pipe(take(1))
   }
 
   /**

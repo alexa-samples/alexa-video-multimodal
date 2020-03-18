@@ -33,7 +33,8 @@ export const Constants = {
     FR: 'France',
     US: 'United States',
     CA: 'Canada',
-    ES: 'Spain'
+    ES: 'Spain',
+    BR: 'Brazil'
   },
   SUPPORTED_LOCALES: {
     'de-DE': 'German: de-DE',
@@ -47,7 +48,9 @@ export const Constants = {
     'en-AU': 'English (Australia): en-AU',
     'fr-FR': 'French (France): fr-FR',
     'en-GB': 'English (United Kingdom): en-GB',
-    'ja-JP': 'Japanese: ja-JP'
+    'ja-JP': 'Japanese: ja-JP',
+    'pt-BR': 'Portuguese (Brazil): pt-BR',
+    'hi-IN': 'Hindi: hi-IN'
   },
   COUNTRY_TO_REALM_MAP: {
     DE: 'eu-west-1',
@@ -60,7 +63,8 @@ export const Constants = {
     FR: 'eu-west-1',
     US: 'us-east-1',
     CA: 'us-east-1',
-    ES: 'eu-west-1'
+    ES: 'eu-west-1',
+    BR: 'us-east-1'
   },
   COUNTRY_TO_LOCALE_MAP: {
     DE: 'de-DE',

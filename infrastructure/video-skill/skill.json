@@ -7,31 +7,13 @@
           "smallIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/e374/5dfd5aeff2324d17893f8e7f60bbdf6e/APP_ICON?versionId=OOYAS1B9ZL2RN_WQ6k6Kf6dLZn00jNF9&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20190807T212656Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIAJFEYRBGIHK2BBYKA%2F20190807%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=3b660c0ee3b4983d1d205dacb39fd37aff46824814ba303532030c10ff0365d6",
           "largeIconUri": "https://s3.amazonaws.com/CAPS-SSE/echo_developer/e741/bfd99964cdf14b0586a71e460521e588/APP_ICON_LARGE?versionId=VF2aa6UmqZfDMhAs4vQf7iJjtVuGB6T2&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20190807T212700Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7200&X-Amz-Credential=AKIAJFEYRBGIHK2BBYKA%2F20190807%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=c8e49d5bbbf7e8cd79b4c4a65ded33f331ed7d982d5b8bdee68e28074f8969c6"
         }
-      }
+      },
+      "category": "SMART_HOME"
     },
     "manifestVersion": "1.0",
     "apis": {
       "video": {
-        "regions": {
-          "NA": {
-            "endpoint": {
-              "uri": "${LambdaEndpointUriNA}"
-            }
-          },
-          "EU": {
-            "endpoint": {
-              "uri": "${LambdaEndpointUriEU}"
-            }
-          },
-          "FE": {
-            "endpoint": {
-              "uri": "${LambdaEndpointUriFE}"
-            }
-          }
-        },
-        "endpoint": {
-          "uri": "${LambdaEndpointUriDefault}"
-        },
+        "regions": {},
         "protocolVersion": "3.0",
         "countries": {
           "US": {
@@ -44,8 +26,7 @@
           }
         },
         "locales": {
-          "en-US": {
-            "catalogInformation": [],
+          "en-US": {            
             "videoProviderTargetingNames": [
               "${skillName}"
             ],

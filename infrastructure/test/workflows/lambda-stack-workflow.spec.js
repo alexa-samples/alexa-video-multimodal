@@ -495,13 +495,66 @@ describe('LambdaStackWorkflow', () => {
   })
 
   /* eslint no-template-curly-in-string: "off" */
+  it('resolveSkillManifestTemplate', () => {
+    // Arrange
+    const skillName = 'dummy-skill-name'
+    const artifactBucketName = 'dummy-artifact-bucket-name'
+    const skillManifestTemplate = {
+      manifest: {
+        publishingInformation: {
+          locales: {
+            'en-US': {}
+          }
+        },
+        apis: {
+          video: {
+            regions: {},
+            locales: {
+              'en-US': {}
+            },
+            countries: {
+              US: {}
+            }
+          }
+        }
+      },
+      dummyLambdaEndpointUriDefaultKey: '${LambdaEndpointUriDefault}',
+      dummySkillNameKey0: '${skillName}',
+      dummySkillNameKey1: '${skillName}',
+      dummyArtifactBucketNameKey: '${artifactBucketName}'
+    }
+    const getCountrySpy = spyOn(ProjectConfigUtil, 'getCountry')
+    getCountrySpy.and.returnValue('dummy-country')
+
+    const getLocalesSpy = spyOn(ProjectConfigUtil, 'getLocales')
+    getLocalesSpy.and.returnValue(['dummy-locale'])
+
+    const handleLegacyCountryLocaleOneToOneMappingSpy = spyOn(LambdaStackWorkflow, 'handleLegacyCountryLocaleOneToOneMapping')
+    handleLegacyCountryLocaleOneToOneMappingSpy.and.returnValue(undefined)
+
+    // Act
+    const resolvedManifest = LambdaStackWorkflow.resolveSkillManifestTemplate(JSON.stringify(skillManifestTemplate), skillName, artifactBucketName)
+
+    // Assert
+    expect(resolvedManifest.dummySkillNameKey0).toEqual(skillName)
+    expect(resolvedManifest.dummySkillNameKey1).toEqual(skillName)
+    expect(resolvedManifest.dummyArtifactBucketNameKey).toEqual(artifactBucketName)
+
+    expect(resolvedManifest.manifest.publishingInformation.locales['dummy-locale']).toEqual({})
+    expect(resolvedManifest.manifest.apis.video.locales['dummy-locale']).toEqual({})
+    expect(resolvedManifest.manifest.apis.video.countries['dummy-country']).toEqual({})
+
+    expect(getCountrySpy).toHaveBeenCalledTimes(1)
+    expect(getLocalesSpy).toHaveBeenCalledTimes(1)
+    expect(handleLegacyCountryLocaleOneToOneMappingSpy).toHaveBeenCalledTimes(1)
+  })
+
+  /* eslint no-template-curly-in-string: "off" */
   describe('resolveSkillManifestTemplate', () => {
     it('NA deployment', () => {
       // Arrange
       const region = 'us-east-1'
       const lambdaFunctionArn = 'dummy-arn'
-      const skillName = 'dummy-skill-name'
-      const artifactBucketName = 'dummy-artifact-bucket-name'
       const skillManifestTemplate = {
         manifest: {
           publishingInformation: {
@@ -511,23 +564,7 @@ describe('LambdaStackWorkflow', () => {
           },
           apis: {
             video: {
-              regions: {
-                NA: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriNA}'
-                  }
-                },
-                EU: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriEU}'
-                  }
-                },
-                FE: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriFE}'
-                  }
-                }
-              },
+              regions: {},
               locales: {
                 'en-US': {}
               },
@@ -536,49 +573,23 @@ describe('LambdaStackWorkflow', () => {
               }
             }
           }
-        },
-        dummyLambdaEndpointUriDefaultKey: '${LambdaEndpointUriDefault}',
-        dummySkillNameKey0: '${skillName}',
-        dummySkillNameKey1: '${skillName}',
-        dummyArtifactBucketNameKey: '${artifactBucketName}'
+        }
       }
-      const getCountrySpy = spyOn(ProjectConfigUtil, 'getCountry')
-      getCountrySpy.and.returnValue('dummy-country')
-
-      const getLocalesSpy = spyOn(ProjectConfigUtil, 'getLocales')
-      getLocalesSpy.and.returnValue(['dummy-locale'])
-
-      const handleLegacyCountryLocaleOneToOneMappingSpy = spyOn(LambdaStackWorkflow, 'handleLegacyCountryLocaleOneToOneMapping')
-      handleLegacyCountryLocaleOneToOneMappingSpy.and.returnValue(undefined)
 
       // Act
-      const resolvedManifest = LambdaStackWorkflow.resolveSkillManifestTemplate(JSON.stringify(skillManifestTemplate), lambdaFunctionArn, region, skillName, artifactBucketName)
+      const resolvedManifest = LambdaStackWorkflow.addLambdaArnsToSkill(skillManifestTemplate, lambdaFunctionArn, region)
 
       // Assert
       expect(resolvedManifest.manifest.apis.video.regions.NA).toBeDefined()
       expect(resolvedManifest.manifest.apis.video.regions.EU).toBeUndefined()
       expect(resolvedManifest.manifest.apis.video.regions.FE).toBeUndefined()
       expect(resolvedManifest.manifest.apis.video.regions.NA.endpoint.uri).toEqual(lambdaFunctionArn)
-      expect(resolvedManifest.dummyLambdaEndpointUriDefaultKey).toEqual(lambdaFunctionArn)
-      expect(resolvedManifest.dummySkillNameKey0).toEqual(skillName)
-      expect(resolvedManifest.dummySkillNameKey1).toEqual(skillName)
-      expect(resolvedManifest.dummyArtifactBucketNameKey).toEqual(artifactBucketName)
-
-      expect(resolvedManifest.manifest.publishingInformation.locales['dummy-locale']).toEqual({})
-      expect(resolvedManifest.manifest.apis.video.locales['dummy-locale']).toEqual({})
-      expect(resolvedManifest.manifest.apis.video.countries['dummy-country']).toEqual({})
-
-      expect(getCountrySpy).toHaveBeenCalledTimes(1)
-      expect(getLocalesSpy).toHaveBeenCalledTimes(1)
-      expect(handleLegacyCountryLocaleOneToOneMappingSpy).toHaveBeenCalledTimes(1)
+      expect(resolvedManifest.manifest.apis.video.endpoint.uri).toEqual(lambdaFunctionArn)
     })
-
     it('EU deployment', () => {
       // Arrange
       const region = 'eu-west-1'
       const lambdaFunctionArn = 'dummy-arn'
-      const skillName = 'dummy-skill-name'
-      const artifactBucketName = 'dummy-artifact-bucket-name'
       const skillManifestTemplate = {
         manifest: {
           publishingInformation: {
@@ -588,23 +599,7 @@ describe('LambdaStackWorkflow', () => {
           },
           apis: {
             video: {
-              regions: {
-                NA: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriNA}'
-                  }
-                },
-                EU: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriEU}'
-                  }
-                },
-                FE: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriFE}'
-                  }
-                }
-              },
+              regions: {},
               locales: {
                 'en-US': {}
               },
@@ -613,50 +608,23 @@ describe('LambdaStackWorkflow', () => {
               }
             }
           }
-        },
-        dummyLambdaEndpointUriDefaultKey: '${LambdaEndpointUriDefault}',
-        dummySkillNameKey0: '${skillName}',
-        dummySkillNameKey1: '${skillName}',
-        dummyArtifactBucketNameKey: '${artifactBucketName}'
+        }
       }
 
-      const getCountrySpy = spyOn(ProjectConfigUtil, 'getCountry')
-      getCountrySpy.and.returnValue('dummy-country')
-
-      const getLocalesSpy = spyOn(ProjectConfigUtil, 'getLocales')
-      getLocalesSpy.and.returnValue(['dummy-locale'])
-
-      const handleLegacyCountryLocaleOneToOneMappingSpy = spyOn(LambdaStackWorkflow, 'handleLegacyCountryLocaleOneToOneMapping')
-      handleLegacyCountryLocaleOneToOneMappingSpy.and.returnValue(undefined)
-
       // Act
-      const resolvedManifest = LambdaStackWorkflow.resolveSkillManifestTemplate(JSON.stringify(skillManifestTemplate), lambdaFunctionArn, region, skillName, artifactBucketName)
+      const resolvedManifest = LambdaStackWorkflow.addLambdaArnsToSkill(skillManifestTemplate, lambdaFunctionArn, region)
 
       // Assert
       expect(resolvedManifest.manifest.apis.video.regions.NA).toBeUndefined()
       expect(resolvedManifest.manifest.apis.video.regions.EU).toBeDefined()
       expect(resolvedManifest.manifest.apis.video.regions.FE).toBeUndefined()
       expect(resolvedManifest.manifest.apis.video.regions.EU.endpoint.uri).toEqual(lambdaFunctionArn)
-      expect(resolvedManifest.dummyLambdaEndpointUriDefaultKey).toEqual(lambdaFunctionArn)
-      expect(resolvedManifest.dummySkillNameKey0).toEqual(skillName)
-      expect(resolvedManifest.dummySkillNameKey1).toEqual(skillName)
-      expect(resolvedManifest.dummyArtifactBucketNameKey).toEqual(artifactBucketName)
-
-      expect(resolvedManifest.manifest.publishingInformation.locales['dummy-locale']).toEqual({})
-      expect(resolvedManifest.manifest.apis.video.locales['dummy-locale']).toEqual({})
-      expect(resolvedManifest.manifest.apis.video.countries['dummy-country']).toEqual({})
-
-      expect(getCountrySpy).toHaveBeenCalledTimes(1)
-      expect(getLocalesSpy).toHaveBeenCalledTimes(1)
-      expect(handleLegacyCountryLocaleOneToOneMappingSpy).toHaveBeenCalledTimes(1)
+      expect(resolvedManifest.manifest.apis.video.endpoint.uri).toEqual(lambdaFunctionArn)
     })
-
     it('FE deployment', () => {
       // Arrange
       const region = 'us-west-2'
       const lambdaFunctionArn = 'dummy-arn'
-      const skillName = 'dummy-skill-name'
-      const artifactBucketName = 'dummy-artifact-bucket-name'
       const skillManifestTemplate = {
         manifest: {
           publishingInformation: {
@@ -666,23 +634,7 @@ describe('LambdaStackWorkflow', () => {
           },
           apis: {
             video: {
-              regions: {
-                NA: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriNA}'
-                  }
-                },
-                EU: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriEU}'
-                  }
-                },
-                FE: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriFE}'
-                  }
-                }
-              },
+              regions: {},
               locales: {
                 'en-US': {}
               },
@@ -691,111 +643,18 @@ describe('LambdaStackWorkflow', () => {
               }
             }
           }
-        },
-        dummyLambdaEndpointUriDefaultKey: '${LambdaEndpointUriDefault}',
-        dummySkillNameKey0: '${skillName}',
-        dummySkillNameKey1: '${skillName}',
-        dummyArtifactBucketNameKey: '${artifactBucketName}'
+        }
       }
 
-      const getCountrySpy = spyOn(ProjectConfigUtil, 'getCountry')
-      getCountrySpy.and.returnValue('dummy-country')
-
-      const getLocalesSpy = spyOn(ProjectConfigUtil, 'getLocales')
-      getLocalesSpy.and.returnValue(['dummy-locale'])
-
-      const handleLegacyCountryLocaleOneToOneMappingSpy = spyOn(LambdaStackWorkflow, 'handleLegacyCountryLocaleOneToOneMapping')
-      handleLegacyCountryLocaleOneToOneMappingSpy.and.returnValue(undefined)
-
       // Act
-      const resolvedManifest = LambdaStackWorkflow.resolveSkillManifestTemplate(JSON.stringify(skillManifestTemplate), lambdaFunctionArn, region, skillName, artifactBucketName)
+      const resolvedManifest = LambdaStackWorkflow.addLambdaArnsToSkill(skillManifestTemplate, lambdaFunctionArn, region)
 
       // Assert
       expect(resolvedManifest.manifest.apis.video.regions.NA).toBeUndefined()
       expect(resolvedManifest.manifest.apis.video.regions.EU).toBeUndefined()
       expect(resolvedManifest.manifest.apis.video.regions.FE).toBeDefined()
       expect(resolvedManifest.manifest.apis.video.regions.FE.endpoint.uri).toEqual(lambdaFunctionArn)
-      expect(resolvedManifest.dummyLambdaEndpointUriDefaultKey).toEqual(lambdaFunctionArn)
-      expect(resolvedManifest.dummySkillNameKey0).toEqual(skillName)
-      expect(resolvedManifest.dummySkillNameKey1).toEqual(skillName)
-      expect(resolvedManifest.dummyArtifactBucketNameKey).toEqual(artifactBucketName)
-
-      expect(resolvedManifest.manifest.publishingInformation.locales['dummy-locale']).toEqual({})
-      expect(resolvedManifest.manifest.apis.video.locales['dummy-locale']).toEqual({})
-      expect(resolvedManifest.manifest.apis.video.countries['dummy-country']).toEqual({})
-
-      expect(getCountrySpy).toHaveBeenCalledTimes(1)
-      expect(getLocalesSpy).toHaveBeenCalledTimes(1)
-      expect(handleLegacyCountryLocaleOneToOneMappingSpy).toHaveBeenCalledTimes(1)
-    })
-
-    it('Unknown region', () => {
-      // Arrange
-      const region = 'junk-region'
-      const lambdaFunctionArn = 'dummy-arn'
-      const skillName = 'dummy-skill-name'
-      const artifactBucketName = 'dummy-artifact-bucket-name'
-      const skillManifestTemplate = {
-        manifest: {
-          publishingInformation: {
-            locales: {
-              'en-US': {}
-            }
-          },
-          apis: {
-            video: {
-              regions: {
-                NA: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriNA}'
-                  }
-                },
-                EU: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriEU}'
-                  }
-                },
-                FE: {
-                  endpoint: {
-                    uri: '${LambdaEndpointUriFE}'
-                  }
-                }
-              },
-              locales: {
-                'en-US': {}
-              },
-              countries: {
-                US: {}
-              }
-            }
-          }
-        },
-        dummyLambdaEndpointUriDefaultKey: '${LambdaEndpointUriDefault}',
-        dummySkillNameKey0: '${skillName}',
-        dummySkillNameKey1: '${skillName}',
-        dummyArtifactBucketNameKey: '${artifactBucketName}'
-      }
-
-      const exitWithErrorSpy = spyOn(Util, 'exitWithError')
-      exitWithErrorSpy.and.returnValue(undefined)
-
-      const getCountrySpy = spyOn(ProjectConfigUtil, 'getCountry')
-      getCountrySpy.and.returnValue('dummy-country')
-
-      const getLocalesSpy = spyOn(ProjectConfigUtil, 'getLocales')
-      getLocalesSpy.and.returnValue(['dummy-locale'])
-
-      const handleLegacyCountryLocaleOneToOneMappingSpy = spyOn(LambdaStackWorkflow, 'handleLegacyCountryLocaleOneToOneMapping')
-      handleLegacyCountryLocaleOneToOneMappingSpy.and.returnValue(undefined)
-
-      // Act
-      LambdaStackWorkflow.resolveSkillManifestTemplate(JSON.stringify(skillManifestTemplate), lambdaFunctionArn, region, skillName, artifactBucketName)
-
-      // Assert
-      expect(exitWithErrorSpy).toHaveBeenCalled()
-      expect(getCountrySpy).toHaveBeenCalledTimes(1)
-      expect(getLocalesSpy).toHaveBeenCalledTimes(1)
-      expect(handleLegacyCountryLocaleOneToOneMappingSpy).toHaveBeenCalledTimes(1)
+      expect(resolvedManifest.manifest.apis.video.endpoint.uri).toEqual(lambdaFunctionArn)
     })
   })
 
@@ -856,6 +715,12 @@ describe('LambdaStackWorkflow', () => {
       const addPermissionSpy = spyOn(LambdaAccess, 'addPermission')
       addPermissionSpy.and.returnValue(of(undefined))
 
+      const addLambdaArnsToSkillSpy = spyOn(LambdaStackWorkflow, 'addLambdaArnsToSkill')
+      addLambdaArnsToSkillSpy.and.returnValue(of({}))
+
+      const updateSkillAndWaitSpy = spyOn(SmapiAccess, 'updateSkillAndWait')
+      updateSkillAndWaitSpy.and.returnValue(of(null))
+
       const configureAccountLinking = spyOn(LambdaStackWorkflow, 'configureAccountLinking')
       configureAccountLinking.and.returnValue(of(undefined))
 
@@ -872,6 +737,8 @@ describe('LambdaStackWorkflow', () => {
         expect(getBucketTaggingSpy).toHaveBeenCalledTimes(1)
         expect(putBucketTaggingSpy).toHaveBeenCalledTimes(1)
         expect(addPermissionSpy).toHaveBeenCalledTimes(1)
+        expect(addLambdaArnsToSkillSpy).toHaveBeenCalledTimes(1)
+        expect(updateSkillAndWaitSpy).toHaveBeenCalledTimes(1)
         expect(configureAccountLinking).toHaveBeenCalledTimes(1)
         done()
       })
@@ -983,6 +850,7 @@ describe('LambdaStackWorkflow', () => {
       // Assert
       expect(locales).toEqual(['en-US'])
     })
+
     it('with legacy locale', () => {
       // Arrange
       const locales = ['en-US']
@@ -994,6 +862,7 @@ describe('LambdaStackWorkflow', () => {
       // Assert
       expect(countries).toEqual(['US'])
     })
+
     it('with non-legacy locale', () => {
       // Arrange
       const locales = ['fr-CA']

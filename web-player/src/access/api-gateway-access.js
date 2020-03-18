@@ -192,11 +192,10 @@ export class ApiGatewayAccess {
       .catch(err => {
         ApiGatewayAccess.logger.error('there was an error creating the cloud watch logs log stream', err)
         console.error('err', err)
+        return Promise.resolve()
       })
       .then(() => {
         this.logger.debug('create cloud watch logs log stream success')
-      })
-      .finally(() => {
         return Promise.resolve()
       })
   }

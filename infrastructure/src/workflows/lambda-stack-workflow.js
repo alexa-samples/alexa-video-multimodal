@@ -18,6 +18,7 @@ import { CognitoAccess } from '../access/aws/cognito-access'
 import { LambdaAccess } from '../access/aws/lambda-access'
 import invert from 'lodash/invert'
 import includes from 'lodash/includes'
+import merge from 'lodash/merge'
 
 /**
  * Workflows relating to creating, updating, and deleting the lambda stack.
@@ -311,44 +312,19 @@ export class LambdaStackWorkflow {
   }
 
   /**
-   * Resolve the skill manifest template by replacing values in the manifest
-   * and removing unused regional sections (only configure for a single region)
+   * Resolve the skill manifest template by replacing values in the manifest with skill specific values
    *
    * @param {string} skillManifestTemplate Skill manifest template as a string
-   * @param {string} lambdaFunctionArn ARN for the skill's lambda
-   * @param {string} region The region where the skill is being deployed to
    * @param {string} skillName The skill name
    * @param {string} artifactBucketName The name of the artifact S3 bucket
-   * @returns {string} The resolved manifest
+   * @returns {object} The resolved manifest
    */
-  static resolveSkillManifestTemplate (skillManifestTemplate, lambdaFunctionArn, region, skillName, artifactBucketName) {
+  static resolveSkillManifestTemplate (skillManifestTemplate, skillName, artifactBucketName) {
     let output = skillManifestTemplate
     const countries = [ProjectConfigUtil.getCountry()]
     const locales = ProjectConfigUtil.getLocales().slice()
 
     LambdaStackWorkflow.handleLegacyCountryLocaleOneToOneMapping(countries, locales)
-
-    if (region === Constants.NA_REGION) {
-      output = output.replace(/\${LambdaEndpointUriNA}/g, lambdaFunctionArn)
-      const o = JSON.parse(output)
-      delete o.manifest.apis.video.regions.EU
-      delete o.manifest.apis.video.regions.FE
-      output = JSON.stringify(o, null, 4)
-    } else if (region === Constants.EU_REGION) {
-      output = output.replace(/\${LambdaEndpointUriEU}/g, lambdaFunctionArn)
-      const o = JSON.parse(output)
-      delete o.manifest.apis.video.regions.NA
-      delete o.manifest.apis.video.regions.FE
-      output = JSON.stringify(o, null, 4)
-    } else if (region === Constants.FE_REGION) {
-      output = output.replace(/\${LambdaEndpointUriFE}/g, lambdaFunctionArn)
-      const o = JSON.parse(output)
-      delete o.manifest.apis.video.regions.NA
-      delete o.manifest.apis.video.regions.EU
-      output = JSON.stringify(o, null, 4)
-    } else {
-      Util.exitWithError(`Unsupported region "${region}"`)
-    }
 
     // Configure country/locales
     const o = JSON.parse(output)
@@ -373,10 +349,35 @@ export class LambdaStackWorkflow {
 
     output = JSON.stringify(o, null, 4)
 
-    output = output.replace(/\${LambdaEndpointUriDefault}/g, lambdaFunctionArn)
     output = output.replace(/\${skillName}/g, skillName)
     output = output.replace(/\${artifactBucketName}/g, artifactBucketName)
     return JSON.parse(output)
+  }
+
+  /**
+   * Add the lambda function ARN to the skill manifest
+   *
+   * @param {object} skillManifest Skill manifest template as an object
+   * @param {string} lambdaFunctionArn ARN for the skill's lambda
+   * @param {string} region The region where the skill is being deployed to
+   * @returns {object} The resolved manifest
+   */
+  static addLambdaArnsToSkill (skillManifest, lambdaFunctionArn, region) {
+    const defaultEndpoint = { manifest: { apis: { video: { endpoint: { uri: lambdaFunctionArn } } } } }
+    skillManifest = merge(skillManifest, defaultEndpoint)
+    const realm = region === Constants.EU_REGION ? 'EU' : (region === Constants.FE_REGION ? 'FE' : 'NA')
+    const regionalizedEndpoint = {
+      manifest: {
+        apis: {
+          video: {
+            regions: {}
+          }
+        }
+      }
+    }
+    regionalizedEndpoint.manifest.apis.video.regions[realm] = { endpoint: { uri: lambdaFunctionArn } }
+    skillManifest = merge(skillManifest, regionalizedEndpoint)
+    return skillManifest
   }
 
   /**
@@ -411,7 +412,7 @@ export class LambdaStackWorkflow {
       .pipe(map(description => {
         lambdaFunctionArn = description.Configuration.FunctionArn
         LambdaStackWorkflow.logger.info(`Using this lambda function arn "${lambdaFunctionArn}"`)
-        skillManifest = LambdaStackWorkflow.resolveSkillManifestTemplate(skillManifestTemplate, lambdaFunctionArn, region, skillName, artifactBucketName)
+        skillManifest = LambdaStackWorkflow.resolveSkillManifestTemplate(skillManifestTemplate, skillName, artifactBucketName)
       }))
       .pipe(mergeMap(() => SmapiAccess.createSkillAndWait(vendorId, skillManifest, accessToken)))
       .pipe(map(id => {
@@ -429,6 +430,10 @@ export class LambdaStackWorkflow {
       }))
       .pipe(mergeMap(tagSet => S3Access.putBucketTagging(artifactBucketName, tagSet)))
       .pipe(mergeMap(() => LambdaAccess.addPermission(lambdaFunctionName, 'lambda:InvokeFunction', 'alexa-connectedhome.amazon.com', uuidv4(), skillId)))
+      .pipe(map(() => {
+        skillManifest = this.addLambdaArnsToSkill(skillManifest, lambdaFunctionArn, region)
+      }))
+      .pipe(mergeMap(() => SmapiAccess.updateSkillAndWait(skillId, skillManifest, accessToken)))
       .pipe(mergeMap(() => this.configureAccountLinking(vendorId, accessToken, stackName, skillId)))
   }
 
