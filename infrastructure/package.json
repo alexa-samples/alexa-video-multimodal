@@ -46,6 +46,8 @@
     "eslint-plugin-node": "^9.1.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.0",
+    "eslint-utils": "^1.4.3",
+    "handlebars": "^4.7.3",
     "istanbul": "^0.4.5",
     "jasmine": "^3.4.0",
     "jsdoc": "^3.6.3",
@@ -55,7 +57,11 @@
     "webpack": "^4.35.0",
     "webpack-cli": "^3.3.5",
     "rimraf": "^2.6.3",
-    "fs": "0.0.1-security"
+    "fs": "0.0.1-security",
+    "serialize-javascript": "^2.1.1",
+    "cryptiles": "^4.1.2",
+    "minimist": "^1.2.2",
+    "acorn": "^6.4.1"
   },
   "dependencies": {
     "ascii-table": "0.0.9",
@@ -66,7 +72,7 @@
     "command-line-usage": "^5.0.5",
     "fs": "0.0.1-security",
     "ini": "^1.3.5",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.15",
     "log4js": "^4.4.0",
     "mime-types": "^2.1.24",
     "module-alias": "^2.2.0",
