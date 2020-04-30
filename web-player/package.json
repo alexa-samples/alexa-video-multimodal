@@ -73,10 +73,11 @@
   "dependencies": {
     "aws4fetch": "^1.0.0",
     "bootstrap": "^4.3.1",
-    "jquery": "^3.4.1",
+    "jquery": ">=3.5.0",
     "js-logger": "^1.6.0",
     "lodash": "^4.17.15",
-    "popper.js": "^1.15.0"
+    "popper.js": "^1.15.0",
+    "kind-of": ">=6.0.3"
   },
   "eslintConfig": {
     "parserOptions": {
