@@ -54,9 +54,10 @@
     "webpack-cli": "^3.3.5",
     "handlebars": "^4.7.3",
     "eslint-utils": "^1.4.3",
-    "acorn": "^6.4.1",
+    "acorn": "^7.1.1",
     "serialize-javascript": "^2.1.1",
-    "minimist": "^1.2.2"
+    "minimist": "^1.2.2",
+    "terser-webpack-plugin": "^1.4.4"
   },
   "dependencies": {
     "aws-sdk": "^2.485.0",
