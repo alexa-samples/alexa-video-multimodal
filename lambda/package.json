@@ -11,7 +11,7 @@
     "release": "npm install && npm run build",
     "execute-tests": "babel-node test/run.js",
     "test": "nyc npm run execute-tests && nyc report --reporter=html",
-    "jsdoc": "jsdoc -d doc src",
+    "jsdoc": "jsdoc -d doc -r src",
     "mv-docs": "node ./scripts/mv-docs.js"
   },
   "author": "Prem Ankur <fnankur@amazon.com>",
