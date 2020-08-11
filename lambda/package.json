@@ -50,7 +50,7 @@
     "nyc": "^14.1.1",
     "rimraf": "^2.6.3",
     "uuid": "^3.3.2",
-    "webpack": "^4.35.0",
+    "webpack": "^4.44.1",
     "webpack-cli": "^3.3.5",
     "handlebars": "^4.7.3",
     "eslint-utils": "^1.4.3",
@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "aws-sdk": "^2.485.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "log4js": "^6.0.0",
     "kind-of": ">=6.0.3"
   },

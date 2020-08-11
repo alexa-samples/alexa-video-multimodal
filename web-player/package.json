@@ -61,7 +61,7 @@
     "sass-loader": "^7.1.0",
     "style-loader": "^0.23.1",
     "terser-webpack-plugin": "^1.4.4",
-    "webpack": "^4.35.3",
+    "webpack": "^4.44.1",
     "webpack-cli": "^3.3.5",
     "webpack-dev-server": "^3.7.2",
     "handlebars": "^4.7.3",
@@ -77,7 +77,7 @@
     "bootstrap": "^4.3.1",
     "jquery": ">=3.5.0",
     "js-logger": "^1.6.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "popper.js": "^1.15.0",
     "kind-of": ">=6.0.3"
   },
