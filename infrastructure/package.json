@@ -58,7 +58,7 @@
     "webpack-cli": "^3.3.5",
     "rimraf": "^2.6.3",
     "fs": "0.0.1-security",
-    "serialize-javascript": "^2.1.1",
+    "serialize-javascript": "^3.1.0",
     "cryptiles": "^4.1.2",
     "minimist": "^1.2.2",
     "acorn": "^7.1.1"
