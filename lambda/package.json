@@ -55,8 +55,10 @@
     "handlebars": "^4.7.3",
     "eslint-utils": "^1.4.3",
     "acorn": "^7.1.1",
-    "serialize-javascript": "^2.1.1",
+    "serialize-javascript": "^3.1.0",
     "minimist": "^1.2.2",
+    "yargs-parser": "^13.1.2",
+    "bl": "^4.0.3",
     "terser-webpack-plugin": "^1.4.4"
   },
   "dependencies": {
