@@ -2,6 +2,9 @@
 
 This project contains reference software for developing an Alexa video skill on Echo Show. Video skills refer to Alexa skills that can play movies, television, or episodic content. Multimodal is a term for devices with interfaces that offer both voice and screen-based experiences. An example of a multimodal device is an Echo Show.  
 
+# ** This repository has been archived **
+This repository is still available as a point-in-time reference, but no further updates or support will be prioritized.
+
 The main components of a video skill consist of an AWS Lambda, a web player, and a skill manifest. Similar to other Alexa skills, the Lambda acts as the skill's backend. The web player acts as the skill's front end, and runs on a Echo Show device. It renders video as well as shows UI transport controls such as a play and a pause button. Similar to other Alexa skills, the video skill manifest is a JSON file that describes your skill.
 
 This project contains a sample web player, a sample lambda, and, also, an infrastructure CLI tool.
